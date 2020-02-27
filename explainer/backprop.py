@@ -3,7 +3,33 @@ from torch.autograd import Variable, Function
 import torch
 import types
 
+class VanillaDifferenceGradExplainer(object):
+    def __init__(self, model):
+        self.model = model
 
+    def _backprop(self, inp, ind1, ind2=None):
+        output = self.model(inp)
+        if ind1 is None:
+            ind1 = output.data.max(1)[1]
+        if ind2 is None:
+            index0 = torch.LongTensor([0]).cuda()
+            ind2 = output.data.topk(k=2,sorted=True)[1][0][0].unsqueeze(0)
+
+        grad_out1 = output.data.clone()
+        grad_out1.fill_(0.0)
+
+        grad_out2 = output.data.clone()
+        grad_out2.fill_(0.0)
+
+        grad_out1.scatter_(1, ind1.unsqueeze(0).t(), 1.0)
+        grad_out2.scatter_(1, ind2.unsqueeze(0).t(), 1.0)
+        output.backward(grad_out1-grad_out2)
+        return inp.grad.data
+
+    def explain(self, inp, ind1=None, ind2=None):
+        return self._backprop(inp, ind1, ind2)
+
+    
 class VanillaGradExplainer(object):
     def __init__(self, model):
         self.model = model
@@ -18,7 +44,7 @@ class VanillaGradExplainer(object):
         output.backward(grad_out)
         return inp.grad.data
 
-    def explain(self, inp, ind=None):
+    def explain(self, inp, ind=None, blank=None):
         return self._backprop(inp, ind)
 
 
@@ -125,7 +151,7 @@ class SmoothGradExplainer(object):
         self.nsamples = nsamples
         self.magnitude = magnitude
 
-    def explain(self, inp, ind=None):
+    def explain(self, inp, ind1=None, ind2=None):
         stdev = self.stdev_spread * (inp.data.max() - inp.data.min())
 
         total_gradients = 0
@@ -134,8 +160,8 @@ class SmoothGradExplainer(object):
         for i in range(self.nsamples):
             noise = torch.randn(inp.size()).cuda() * stdev
             inp.data.copy_(noise + origin_inp_data)
-            grad = self.base_explainer.explain(inp, ind)
-
+            grad = self.base_explainer.explain(inp, ind1, ind2)
+                
             if self.magnitude:
                 total_gradients += grad ** 2
             else:
