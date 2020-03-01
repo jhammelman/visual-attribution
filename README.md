@@ -13,7 +13,7 @@ Including:
 - [x] Excitation Backpropagation, Contrastive Excitation Backpropagation
 - [x] GradCAM
 - [x] DeepLIFT
-- [ ] Deconv
+- [x] Deconv
 - [ ] PatternNet, PatternLRP
 - [ ] Real Time Saliency
 - [ ] Occlusion
@@ -26,7 +26,7 @@ Including:
 - Linux
 - NVIDIA GPU + CUDA (Current only support running on GPU)
 - Python 3.x
-- PyTorch version == 1.3 TODO check
+- PyTorch version == 1.3 
 - torchvision, skimage, matplotlib
 
 modify torchvision:
@@ -35,22 +35,13 @@ Modify from PIL import Image, ImageOps, ImageEnhance, PILLOW_VERSION to from PIL
 ### Getting Started
 - Clone this repo:
 ```bash
-git clone git@github.com:yulongwang12/visual-attribution.git
+git clone https://github.com/jhammelman/visual-attribution.git
 cd visual-attribution
+git checkout any_input_CNN
 ```
-- Download pretrained weights
-```bash
-cd weights
-bash ./download_patterns.sh  # for using PatternNet, PatternLRP
-bash ./download_realtime_saliency.sh # for using Real Time Saliency
-```
-**Note**: I convert caffe bvlc_googlenet pretrained models in pytorch format (see `googlenet.py` and `weights/googlenet.pth`). 
+- Run for images on vgg net
+python saliency_comparison.py
 
-### Visual Saliency Comparison
-see notebook [saliency_comparison.ipynb](./notebooks/saliency_comparison.ipynb). If everything works, you will get the above image.
-
-### Weakly Supervised Object Localization
-TBD
 
 ## Citation
 If you use our codebase or models in your research, please cite this project.
