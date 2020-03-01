@@ -9,15 +9,15 @@ Including:
 - [x] Grad X Input
 - [x] Integrated Gradient
 - [x] SmoothGrad
-- [x] Deconv
 - [x] Guided Backpropagation
 - [x] Excitation Backpropagation, Contrastive Excitation Backpropagation
 - [x] GradCAM
-- [x] PatternNet, PatternLRP
-- [x] Real Time Saliency
-- [x] Occlusion
-- [x] Feedback
 - [x] DeepLIFT
+- [ ] Deconv
+- [ ] PatternNet, PatternLRP
+- [ ] Real Time Saliency
+- [ ] Occlusion
+- [ ] Feedback
 - [ ] Meaningful Perturbation
 
 ## Setup
@@ -26,8 +26,11 @@ Including:
 - Linux
 - NVIDIA GPU + CUDA (Current only support running on GPU)
 - Python 3.x
-- PyTorch version == **0.2.0** (Sorry I haven't tested on newer versions)
+- PyTorch version == 1.3 TODO check
 - torchvision, skimage, matplotlib
+
+modify torchvision:
+Modify from PIL import Image, ImageOps, ImageEnhance, PILLOW_VERSION to from PIL import Image, ImageOps, ImageEnhance, __version__ in functional.py
 
 ### Getting Started
 - Clone this repo:
