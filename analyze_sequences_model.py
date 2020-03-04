@@ -2,7 +2,7 @@
 import sys
 import os
 import utils
-import viz
+#import viz
 import torch
 import time
 import os
@@ -41,9 +41,6 @@ opts=parser.parse_args()
 
 from factorized import * 
 
-if opts.write_bigwig:
-    assert(opts.genome != None)
-    chrom_sizes = [(line.strip().split()[0],int(line.strip().split()[1])) for line in open(opts.genome)]
                    
 target_comparisons = []
 for line in open(opts.comparisons):
@@ -51,10 +48,15 @@ for line in open(opts.comparisons):
     target_comparisons.append(tuple((int(targets[0]),
                                     int(targets[1]))))
                               
-methods=methods = ['smooth_grad',
-                   'smooth_difference',
-                   'deeplift_rescale',
-                   'saliency']
+methods = ['smooth_grad',
+           'deeplift_rescale_zeros',
+           'deeplift_rescale_neutral',
+           'deeplift_rescale_shuffled',
+           'saliency',
+           'integrate_grad',
+           'gradcam',
+           'excitation_backprop',
+           'contrastive_excitation_backprop']
 
 def ensure_dir(directory):
     if not os.path.exists(directory):
@@ -65,16 +67,17 @@ bed,X=fasta2hot(opts.fasta_sequences)
 for target_set in target_comparisons:
     all_saliency_maps = {}
     for method in methods:
-        if opts.write_bigwig:
-            values = np.zeros((X.shape[0],X.shape[2]))
-        else:
-            values = np.zeros((X.shape[0],X.shape[2],X.shape[1]))
+        print(target_set,method)
+        values = np.zeros((X.shape[0],X.shape[2],X.shape[1]))
         for seq_index in range(X.shape[0]):
             # generate neural network architecture from factorized.py
             model = Net(1000,opts.n_targets)
+                    
             #load model weights
             checkpoint = torch.load(opts.model_weights)
             model.load_state_dict(checkpoint['state_dict'],strict=False)
+            for keys in model.state_dict().keys():
+                print(keys)    #2 does not show con2d list
             
             model.cuda()
             model.eval()
