@@ -3,7 +3,7 @@ from explainer import deeplift as df
 from explainer import gradcam as gc
 from explainer import patterns as pt
 from explainer import ebp
-from explainer import real_time as rt
+#from explainer import real_time as rt
 
 
 def get_explainer(model,name):
@@ -14,7 +14,9 @@ def get_explainer(model,name):
         'integrate_grad': bp.IntegrateGradExplainer,
         'deconv': bp.DeconvExplainer,
         'guided_backprop': bp.GuidedBackpropExplainer,
-        'deeplift_rescale': df.DeepLIFTRescaleExplainer,
+        'deeplift_rescale_neutral': lambda x:  df.DeepLIFTRescaleExplainer(x,'neutral'),
+        'deeplift_rescale_shuffled': lambda x: df.DeepLIFTRescaleExplainer(x,'shuffled'),
+        'deeplift_rescale_zeros': lambda x: df.DeepLIFTRescaleExplainer(x,'zeros'),
         'gradcam': gc.GradCAMExplainer,
         'pattern_net': pt.PatternNetExplainer,
         'pattern_lrp': pt.PatternLRPExplainer,
@@ -22,7 +24,7 @@ def get_explainer(model,name):
         'contrastive_excitation_backprop': ebp.ContrastiveExcitationBackpropExplainer,
         'vanilla_difference':bp.VanillaDifferenceGradExplainer
     }
-    
+        
     if name == 'smooth_grad':
         base_explainer = methods['vanilla_grad'](model)
         explainer = bp.SmoothGradExplainer(base_explainer)
@@ -32,13 +34,13 @@ def get_explainer(model,name):
         explainer = bp.SmoothGradExplainer(base_explainer)
 
     elif name == 'excitation_backprop' or name == 'gradcam':
-        explainer = methods[name](model,['layer1'])
+        explainer = methods[name](model,['maxpool3'])
 
     elif name == 'contrastive_excitation_backprop':
         explainer = methods[name](model,
-                                  intermediate_layer_keys=['layer1'], 
-                                  output_layer_keys=['layer1'],  
-                                  final_linear_keys=['layer2'])
+                                  intermediate_layer_keys=['maxpool1'], 
+                                  output_layer_keys=['maxpool3'],  
+                                  final_linear_keys=['fc3'])
     
     else:
         explainer = methods[name](model)
