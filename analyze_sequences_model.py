@@ -11,6 +11,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sequence_explainer import get_explainer
 import argparse
+from torch.nn import functional
 
 alpha = ["A","C","G","T"]
 def fasta2hot(fasta):
@@ -68,7 +69,10 @@ for target_set in target_comparisons:
     all_saliency_maps = {}
     for method in methods:
         print(target_set,method)
-        values = np.zeros((X.shape[0],X.shape[2],X.shape[1]))
+        if 'excitation' in method or 'gradcam' in method:
+            values = np.zeros((X.shape[0],X.shape[2],1))
+        else:
+            values = np.zeros((X.shape[0],X.shape[2],X.shape[1]))
         for seq_index in range(X.shape[0]):
             # generate neural network architecture from factorized.py
             model = Net(1000,opts.n_targets)
@@ -76,8 +80,8 @@ for target_set in target_comparisons:
             #load model weights
             checkpoint = torch.load(opts.model_weights)
             model.load_state_dict(checkpoint['state_dict'],strict=False)
-            for keys in model.state_dict().keys():
-                print(keys)    #2 does not show con2d list
+            #for keys in model.state_dict().keys():
+            #    print(keys)    #2 does not show con2d list
             
             model.cuda()
             model.eval()
@@ -93,7 +97,12 @@ for target_set in target_comparisons:
                 saliency = explainer.explain(inp, target, target2)
             else:
                 saliency = explainer.explain(inp, target)
-                
+            print(saliency.cpu().numpy().shape)
+            if 'excitation' in method or 'gradcam' in method:
+                print(functional.interpolate(saliency.view(1,1,-1),size=X.shape[2],mode='linear').cpu().numpy().shape)
+                values[seq_index,:,:] = np.transpose(functional.interpolate(saliency.view(1,1,-1),size=X.shape[2],mode='linear').cpu().numpy()[0,:,:])
+            else:
+                values[seq_index,:,:] = np.transpose(saliency.cpu().numpy()).reshape((-1,4))
           
         all_saliency_maps[method] = values
         
