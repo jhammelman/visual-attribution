@@ -27,14 +27,14 @@ def get_explainer(model,name):
         
     if name == 'smooth_grad':
         base_explainer = methods['vanilla_grad'](model)
-        explainer = bp.SmoothGradExplainer(base_explainer)
+        explainer = bp.SmoothGradExplainer(base_explainer,magnitude=False)
         
     elif name == 'smooth_difference':
         base_explainer = methods['vanilla_difference'](model)
         explainer = bp.SmoothGradExplainer(base_explainer)
 
     elif name == 'excitation_backprop' or name == 'gradcam':
-        explainer = methods[name](model,['maxpool3'])
+        explainer = methods[name](model,['maxpool1'])
 
     elif name == 'contrastive_excitation_backprop':
         explainer = methods[name](model,
