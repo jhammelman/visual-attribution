@@ -3,7 +3,7 @@ from explainer import deeplift as df
 from explainer import gradcam as gc
 from explainer import patterns as pt
 from explainer import ebp
-from explainer import real_time as rt
+#from explainer import real_time as rt
 
 
 def get_explainer(model, name):
@@ -19,8 +19,8 @@ def get_explainer(model, name):
         'pattern_net': pt.PatternNetExplainer,
         'pattern_lrp': pt.PatternLRPExplainer,
         'excitation_backprop': ebp.ExcitationBackpropExplainer,
-        'contrastive_excitation_backprop': ebp.ContrastiveExcitationBackpropExplainer,
-        'real_time_saliency': rt.RealTimeSaliencyExplainer
+        'contrastive_excitation_backprop': ebp.ContrastiveExcitationBackpropExplainer
+        #'real_time_saliency': rt.RealTimeSaliencyExplainer
     }
 
     if name == 'smooth_grad':

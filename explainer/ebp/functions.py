@@ -1,7 +1,7 @@
 from torch.autograd import Function, Variable
-from torch._thnn import type2backend
 from torch.nn.modules.utils import _pair
-
+import torch
+import torch.nn.functional as F
 
 class EBLinear(Function):
 
@@ -63,23 +63,13 @@ class EBConv2d(Function):
         ctx.padding = _pair(padding)
         ctx.dilation = _pair(dilation)
         ctx.groups = groups
-        kH, kW = weight.size(2), weight.size(3)
-        
-        output_size = _output_size(inp, weight, padding, dilation, stride)
-        
-        output = inp.new(*output_size)
-        
-        columns = inp.new(*output_size)
-        ones = inp.new(*output_size)
 
-        backend = type2backend[inp.type()]
-        f = getattr(backend, 'SpatialConvolutionMM_updateOutput')
-        
-        #order as stated in
-        # https://github.com/torch/nn/blob/master/lib/THNN/generic/SpatialConvolutionMM.c
-        f(backend.library_state, inp, output, weight, bias, columns, ones,
-          kW, kH, ctx.stride[1], ctx.stride[0], ctx.padding[1], ctx.padding[0])
-        
+
+        output = F.conv2d(inp,weight,bias,
+                          ctx.stride,
+                          ctx.padding,
+                          ctx.dilation,
+                          ctx.groups)
         return output
 
     @staticmethod
@@ -91,25 +81,21 @@ class EBConv2d(Function):
         kH, kW = weight.size(2), weight.size(3)
 
         wplus = weight.clone().clamp(min=0)
-        new_output = inp.new(*output_size)
-        columns = inp.new(*output_size)
-        ones = inp.new(*output_size)
+        biasplus=bias.clamp(min=0)
 
-        backend = type2backend[inp.type()]
-        f = getattr(backend, 'SpatialConvolutionMM_updateOutput')
-        f(backend.library_state, inp, new_output, wplus, None, columns, ones,
-          kW, kH, ctx.stride[1], ctx.stride[0], ctx.padding[1], ctx.padding[0])
-        
+        new_output = F.conv2d(inp,wplus,biasplus,
+                          ctx.stride,
+                          ctx.padding,
+                          ctx.dilation,
+                          ctx.groups)
 
         normalized_grad_output = grad_output.data / (new_output + 1e-10)
         normalized_grad_output = normalized_grad_output * (new_output > 0).float()
 
-        grad_inp = inp.new()
-        grad_inp.resize_as_(inp)
-
-        g = getattr(backend, 'SpatialConvolutionMM_updateGradInput')
-        g(backend.library_state, inp, normalized_grad_output, grad_inp, wplus, columns, ones,
-          kW, kH, ctx.stride[1], ctx.stride[0], ctx.padding[1], ctx.padding[0])
+        grad_inp = torch.nn.grad.conv2d_input(inp.size(),
+                                              wplus,
+                                              normalized_grad_output,
+                                              ctx.stride, ctx.padding, ctx.dilation,ctx.groups)
 
         grad_inp = grad_inp * inp
 
@@ -127,38 +113,39 @@ class EBAvgPool2d(Function):
         ctx.padding = (padding, padding)
         ctx.ceil_mode = ceil_mode
         ctx.count_include_pad = count_include_pad
-        backend = type2backend[type(inp)]
-        output = inp.new()
-
-        backend.SpatialAveragePooling_updateOutput(
-            backend.library_state,
-            inp, output,
-            ctx.kernel_size[1], ctx.kernel_size[0],
-            ctx.stride[1], ctx.stride[0],
-            ctx.padding[1], ctx.padding[0],
-            ctx.ceil_mode, ctx.count_include_pad)
-
+        #backend = type2backend[type(inp)]
+        #output = inp.new()
         ctx.save_for_backward(inp, output)
+        output =  ctx._update_output(input)
+        #backend.SpatialAveragePooling_updateOutput(
+        #    backend.library_state,
+        #    inp, output,
+        #    ctx.kernel_size[1], ctx.kernel_size[0],
+        #    ctx.stride[1], ctx.stride[0],
+        #    ctx.padding[1], ctx.padding[0],
+        #    ctx.ceil_mode, ctx.count_include_pad)
+
+
 
         return output
 
     @staticmethod
     def backward(ctx, grad_output):
-        backend = type2backend[type(grad_output.data)]
+        #backend = type2backend[type(grad_output.data)]
         inp, output = ctx.saved_tensors
 
         normalized_grad_output = grad_output.data / (output + 1e-10)
         normalized_grad_output = normalized_grad_output * (output > 0).float()
 
-        grad_inp = inp.new()
-
-        backend.SpatialAveragePooling_updateGradInput(
-            backend.library_state,
-            inp, normalized_grad_output, grad_inp,
-            ctx.kernel_size[1], ctx.kernel_size[0],
-            ctx.stride[1], ctx.stride[0],
-            ctx.padding[1], ctx.padding[0],
-            ctx.ceil_mode, ctx.count_include_pad)
+        #grad_inp = inp.new()
+        grad_inp = (ctx._grad_input(input,normalized_grad_output))
+        #backend.SpatialAveragePooling_updateGradInput(
+        #    backend.library_state,
+        #    inp, normalized_grad_output, grad_inp,
+        #    ctx.kernel_size[1], ctx.kernel_size[0],
+        #    ctx.stride[1], ctx.stride[0],
+        #    ctx.padding[1], ctx.padding[0],
+        #    ctx.ceil_mode, ctx.count_include_pad)
 
         grad_inp = grad_inp * inp
 

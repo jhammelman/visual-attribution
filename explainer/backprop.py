@@ -65,7 +65,26 @@ class SaliencyExplainer(VanillaGradExplainer):
         grad = self._backprop(inp, ind)
         return grad.abs()
 
+class NonlinearIntegrateGradExplainer(VanillaGradExplainer):
+    def __init__(self, model, steps=100, path_generator=None):
+        super(IntegrateGradExplainer, self).__init__(model)
+        self.steps = steps
 
+    def explain(self, inp, ind=None):
+        grad = 0
+        inp_data = inp.data.clone()
+
+        for alpha in np.arange(1 / self.steps, 1.0, 1 / self.steps):
+            # TODO modify such that step in input space is
+            #
+            new_data = path_generator(inp_data,alpha)
+            new_inp = Variable(new_data, requires_grad=True)
+            g = self._backprop(new_inp, ind)
+            grad += g
+
+        return grad * inp_data / self.steps
+
+    
 class IntegrateGradExplainer(VanillaGradExplainer):
     def __init__(self, model, steps=100):
         super(IntegrateGradExplainer, self).__init__(model)

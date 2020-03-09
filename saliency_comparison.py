@@ -31,12 +31,13 @@ model_methods = [
     ['vgg16', 'smooth_grad', 'imshow'],
     ['vgg16', 'grad_x_input', 'imshow'],
     ['vgg16', 'saliency', 'imshow'],
+    ['vgg16', 'deconv',    'imshow'],
     ['vgg16', 'integrate_grad',     'camshow'],
     ['vgg16', 'deeplift_rescale',     'camshow'],
     ['vgg16', 'gradcam',     'camshow'],
     ['vgg16', 'guided_backprop',     'camshow'],
-    ['vgg16', 'contrastive_excitation_backprop',    'camshow'],
-    ['vgg16', 'excitation_backprop',    'camshow']
+    ['vgg16', 'excitation_backprop',    'camshow'],
+    ['vgg16', 'contrastive_excitation_backprop',    'camshow']
 ]
 
 

@@ -2,14 +2,16 @@ from explainer.backprop import GradxInputExplainer
 import types
 import torch.nn.functional as F
 from torch.autograd import Variable
-
+import torch
 # Based on formulation in DeepExplain, https://arxiv.org/abs/1711.06104
 # https://github.com/marcoancona/DeepExplain/blob/master/deepexplain/tensorflow/methods.py#L221-L272
 class DeepLIFTRescaleExplainer(GradxInputExplainer):
-    def __init__(self, model):
+    def __init__(self, model, baseline_type='zeros'):
         super(DeepLIFTRescaleExplainer, self).__init__(model)
         self._prepare_reference()
+        assert(baseline_type in ['neutral','zeros','shuffled'])
         self.baseline_inp = None
+        self.baseline_type = baseline_type
         self._override_backward()
 
     def _prepare_reference(self):
@@ -45,10 +47,15 @@ class DeepLIFTRescaleExplainer(GradxInputExplainer):
     def _baseline_forward(self, inp):
         if self.baseline_inp is None:
             self.baseline_inp = inp.data.clone()
-            self.baseline_inp.fill_(0.0)
+            if self.baseline_type is 'neutral':
+               self.baseline_inp.fill_(0.25)
+            elif self.baseline_type is 'zeros':
+               self.baseline_inp.fill_(0.0)
+            elif self.baseline_type is 'shuffled':
+               self.baseline_inp = self.baseline_inp[:,:,torch.randperm(self.baseline_inp.size()[2])]
+            #TODO baseline_inp with shuffled k-mers??
             self.baseline_inp = Variable(self.baseline_inp)
-        else:
-            self.baseline_inp.fill_(0.0)
+               
         # get ref
         _ = self.model(self.baseline_inp)
 
