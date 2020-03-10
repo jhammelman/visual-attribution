@@ -49,7 +49,8 @@ for line in open(opts.comparisons):
     target_comparisons.append(tuple((int(targets[0]),
                                     int(targets[1]))))
                               
-methods = ['smooth_grad',
+methods = ['integrate_grad_nonlinear',
+           'smooth_grad',
            'deeplift_rescale_zeros',
            'deeplift_rescale_neutral',
            'deeplift_rescale_shuffled',
@@ -73,6 +74,8 @@ for target_set in target_comparisons:
             values = np.zeros((X.shape[0],X.shape[2],1))
         else:
             values = np.zeros((X.shape[0],X.shape[2],X.shape[1]))
+        
+            
         for seq_index in range(X.shape[0]):
             # generate neural network architecture from factorized.py
             model = Net(1000,opts.n_targets)
@@ -86,7 +89,10 @@ for target_set in target_comparisons:
             model.cuda()
             model.eval()
             #create explainer from sequence_explainer
-            explainer = get_explainer(model,method)
+            if 'nonlinear' in method:
+                explainer = get_explainer(model,method,X)
+            else:
+                explainer = get_explainer(model,method)
             inp = torch.from_numpy(X[seq_index,:,:])
             inp = inp.float()
             inp = utils.cuda_var(inp.unsqueeze(0), requires_grad=True)
@@ -97,9 +103,8 @@ for target_set in target_comparisons:
                 saliency = explainer.explain(inp, target, target2)
             else:
                 saliency = explainer.explain(inp, target)
-            print(saliency.cpu().numpy().shape)
+
             if 'excitation' in method or 'gradcam' in method:
-                print(functional.interpolate(saliency.view(1,1,-1),size=X.shape[2],mode='linear').cpu().numpy().shape)
                 values[seq_index,:,:] = np.transpose(functional.interpolate(saliency.view(1,1,-1),size=X.shape[2],mode='linear').cpu().numpy()[0,:,:])
             else:
                 values[seq_index,:,:] = np.transpose(saliency.cpu().numpy()).reshape((-1,4))

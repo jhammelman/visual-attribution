@@ -2,6 +2,7 @@ import numpy as np
 from torch.autograd import Variable, Function
 import torch
 import types
+import path
 
 class VanillaDifferenceGradExplainer(object):
     def __init__(self, model):
@@ -66,23 +67,31 @@ class SaliencyExplainer(VanillaGradExplainer):
         return grad.abs()
 
 class NonlinearIntegrateGradExplainer(VanillaGradExplainer):
-    def __init__(self, model, steps=100, path_generator=None):
-        super(IntegrateGradExplainer, self).__init__(model)
-        self.steps = steps
-
+    def __init__(self, model, data, k=5, reference=None, path_generator=None):
+        super(NonlinearIntegrateGradExplainer, self).__init__(model)
+        self.reference=reference
+        if path_generator != None:
+            self._path_fnc = path_generator
+        else:
+            self._path_fnc = lambda args: path.sequence_path(args,data,k)
+            
     def explain(self, inp, ind=None):
+        if self.reference == None:
+            self.reference = inp.data.clone()
+            self.reference = self.reference[:,:,torch.randperm(self.reference.size()[2])]
+        
         grad = 0
         inp_data = inp.data.clone()
-
-        for alpha in np.arange(1 / self.steps, 1.0, 1 / self.steps):
-            # TODO modify such that step in input space is
-            #
-            new_data = path_generator(inp_data,alpha)
-            new_inp = Variable(new_data, requires_grad=True)
+        new_data,nsteps = self._path_fnc((inp_data.cpu().numpy(),
+                                          self.reference.cpu().numpy()))
+        for i in range(nsteps):
+            new_inp = torch.from_numpy(new_data[i])
+            new_inp = new_inp.float()
+            new_inp = Variable(new_inp.unsqueeze(0).cuda(), requires_grad=True)
             g = self._backprop(new_inp, ind)
             grad += g
 
-        return grad * inp_data / self.steps
+        return grad * inp_data / nsteps
 
     
 class IntegrateGradExplainer(VanillaGradExplainer):
