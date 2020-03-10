@@ -20,13 +20,15 @@ def get_explainer(model, name):
         'pattern_lrp': pt.PatternLRPExplainer,
         'excitation_backprop': ebp.ExcitationBackpropExplainer,
         'contrastive_excitation_backprop': ebp.ContrastiveExcitationBackpropExplainer
-        #'real_time_saliency': rt.RealTimeSaliencyExplainer
     }
 
     if name == 'smooth_grad':
         base_explainer = methods['vanilla_grad'](model)
         explainer = bp.SmoothGradExplainer(base_explainer)
-
+        
+    if name == 'path_integrate_grad':
+        explainer = bp.NonlinearIntegrateGradExplainer(model)
+        
     elif name.find('pattern') != -1:
         explainer = methods[name](
             model,
